@@ -124,7 +124,7 @@ The plugin includes comprehensive tests:
 
 Run tests:
 ```bash
-cd e:\Git\spring-boot-code-generator
+cd spring-boot-code-generator
 .\mvnw.cmd test
 ```
 
@@ -132,7 +132,7 @@ cd e:\Git\spring-boot-code-generator
 
 Build and install the plugin:
 ```bash
-cd e:\Git\spring-boot-code-generator
+cd spring-boot-code-generator
 .\mvnw.cmd clean install
 ```
 
