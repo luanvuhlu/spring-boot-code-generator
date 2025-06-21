@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import com.squareup.javapoet.*;
 import javax.lang.model.element.Modifier;
@@ -21,8 +21,8 @@ public class ControllerGenerator extends BaseGenerator {
         String controllerName = config.getEntityName() + "Controller";
         String serviceName = config.getEntityName() + "Service";
         
-        ClassName entityClass = ClassName.get(config.getPackageName(), config.getEntityName());
-        ClassName serviceClass = ClassName.get(config.getPackageName(), serviceName);
+        ClassName entityClass = ClassName.get(config.getPackageName() + ".entity", config.getEntityName());
+        ClassName serviceClass = ClassName.get(config.getPackageName() + ".service", serviceName);
         TypeName idType = getIdType();
 
         // Create the controller class
@@ -44,17 +44,16 @@ public class ControllerGenerator extends BaseGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(serviceClass, uncapitalize(serviceName))
                 .addStatement("this.$N = $N", uncapitalize(serviceName), uncapitalize(serviceName))
-                .build());
-
-        // Add CRUD endpoints
+                .build());        // Add CRUD endpoints
         addCrudEndpoints(controllerBuilder, entityClass, idType, serviceName);
 
         // Build the Java file
-        JavaFile javaFile = JavaFile.builder(config.getPackageName(), controllerBuilder.build())
+        String controllerPackage = config.getPackageName() + ".controller";
+        JavaFile javaFile = JavaFile.builder(controllerPackage, controllerBuilder.build())
                 .build();
 
         // Write to file
-        javaFile.writeTo(outputDirectory.getParentFile());
+        javaFile.writeTo(outputDirectory);
         
         System.out.println("Generated Controller class: " + controllerName);
     }

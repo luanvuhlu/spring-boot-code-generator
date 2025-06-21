@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import java.util.List;
 

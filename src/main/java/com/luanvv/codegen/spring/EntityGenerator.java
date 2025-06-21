@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import com.squareup.javapoet.*;
 import javax.lang.model.element.Modifier;
@@ -43,17 +43,13 @@ public class EntityGenerator extends BaseGenerator {
         addEqualsMethod(entityBuilder);
 
         // Add hashCode method
-        addHashCodeMethod(entityBuilder);
-
-        // Build the Java file
-        JavaFile javaFile = JavaFile.builder(config.getPackageName(), entityBuilder.build())
-                .build();
-
-        // Write to file
-        File entityFile = new File(getPackageDirectory(), config.getEntityName() + ".java");
-        javaFile.writeTo(outputDirectory.getParentFile());
+        addHashCodeMethod(entityBuilder);        // Build the Java file
+        String entityPackage = config.getPackageName() + ".entity";
+        JavaFile javaFile = JavaFile.builder(entityPackage, entityBuilder.build())
+                .build();// Write to file
+        javaFile.writeTo(outputDirectory);
         
-        System.out.println("Generated Entity class: " + config.getEntityName() + " at " + entityFile.getAbsolutePath());
+        System.out.println("Generated Entity class: " + config.getEntityName());
     }
 
     private void addFieldToEntity(TypeSpec.Builder entityBuilder, CodeGenConfig.Field field) {
@@ -116,30 +112,29 @@ public class EntityGenerator extends BaseGenerator {
             default:
                 return ClassName.get(String.class); // Default to String
         }
-    }
+    }    private void addToStringMethod(TypeSpec.Builder entityBuilder) {
+        MethodSpec.Builder toStringMethod = MethodSpec.methodBuilder("toString")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(Override.class)
+                .returns(String.class);
 
-    private void addToStringMethod(TypeSpec.Builder entityBuilder) {
-        StringBuilder toStringBuilder = new StringBuilder();
-        toStringBuilder.append("\"").append(config.getEntityName()).append("{\"");
+        StringBuilder returnStatement = new StringBuilder();
+        returnStatement.append("return \"").append(config.getEntityName()).append("{\"");
         
         for (int i = 0; i < config.getFields().size(); i++) {
             CodeGenConfig.Field field = config.getFields().get(i);
             if (i > 0) {
-                toStringBuilder.append(" + \", \"");
+                returnStatement.append(" + \", ");
             } else {
-                toStringBuilder.append(" + \"");
+                returnStatement.append(" + \"");
             }
-            toStringBuilder.append(" + \"").append(field.getName()).append("=\" + ").append(field.getName());
+            returnStatement.append(field.getName()).append("=\" + ").append(field.getName());
         }
-        toStringBuilder.append(" + \"}\"");
+        returnStatement.append(" + \"}\"");
 
-        entityBuilder.addMethod(MethodSpec.methodBuilder("toString")
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(Override.class)
-                .returns(String.class)
-                .addStatement("return $L", toStringBuilder.toString())
-                .build());
-    }    private void addEqualsMethod(TypeSpec.Builder entityBuilder) {
+        toStringMethod.addStatement(returnStatement.toString());
+        entityBuilder.addMethod(toStringMethod.build());
+    }private void addEqualsMethod(TypeSpec.Builder entityBuilder) {
         MethodSpec.Builder equalsBuilder = MethodSpec.methodBuilder("equals")
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(Override.class)
@@ -147,9 +142,8 @@ public class EntityGenerator extends BaseGenerator {
                 .addParameter(Object.class, "o");
 
         equalsBuilder.addStatement("if (this == o) return true");
-        equalsBuilder.addStatement("if (o == null || getClass() != o.getClass()) return false");
-        equalsBuilder.addStatement("$T that = ($T) o", ClassName.get(config.getPackageName(), config.getEntityName()), 
-                ClassName.get(config.getPackageName(), config.getEntityName()));
+        equalsBuilder.addStatement("if (o == null || getClass() != o.getClass()) return false");        equalsBuilder.addStatement("$T that = ($T) o", ClassName.get(config.getPackageName() + ".entity", config.getEntityName()), 
+                ClassName.get(config.getPackageName() + ".entity", config.getEntityName()));
 
         // Build a single return statement with all field comparisons
         if (config.getFields().size() == 1) {

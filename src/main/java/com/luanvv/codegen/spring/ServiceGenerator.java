@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import com.squareup.javapoet.*;
 import javax.lang.model.element.Modifier;
@@ -22,9 +22,11 @@ public class ServiceGenerator extends BaseGenerator {
         
         generateServiceInterface();
         generateServiceImplementation();
-    }    private void generateServiceInterface() throws IOException {
+    }
+
+    private void generateServiceInterface() throws IOException {
         String serviceName = config.getEntityName() + "Service";
-        ClassName entityClass = ClassName.get(config.getPackageName(), config.getEntityName());
+        ClassName entityClass = ClassName.get(config.getPackageName() + ".entity", config.getEntityName());
         TypeName idType = getIdType();
 
         // Create the service interface
@@ -69,28 +71,28 @@ public class ServiceGenerator extends BaseGenerator {
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .returns(ParameterizedTypeName.get(ClassName.get(Optional.class), entityClass))
                         .addParameter(getJavaType(field.getType()), field.getName())
-                        .build());
-            }
+                        .build());            }
         }
 
         // Build the Java file
-        JavaFile javaFile = JavaFile.builder(config.getPackageName(), serviceBuilder.build())
+        String servicePackage = config.getPackageName() + ".service";
+        JavaFile javaFile = JavaFile.builder(servicePackage, serviceBuilder.build())
                 .build();
 
         // Write to file
-        javaFile.writeTo(outputDirectory.getParentFile());
+        javaFile.writeTo(outputDirectory);
         
         System.out.println("Generated Service interface: " + serviceName);
     }
 
-    private void generateServiceImplementation() throws IOException {
-        String serviceName = config.getEntityName() + "Service";
+    private void generateServiceImplementation() throws IOException {        String serviceName = config.getEntityName() + "Service";
         String serviceImplName = config.getEntityName() + "ServiceImpl";
         String repositoryName = config.getEntityName() + "Repository";
+        String servicePackage = config.getPackageName() + ".service";
         
-        ClassName entityClass = ClassName.get(config.getPackageName(), config.getEntityName());
-        ClassName serviceInterface = ClassName.get(config.getPackageName(), serviceName);
-        ClassName repositoryClass = ClassName.get(config.getPackageName(), repositoryName);
+        ClassName entityClass = ClassName.get(config.getPackageName() + ".entity", config.getEntityName());
+        ClassName serviceInterface = ClassName.get(config.getPackageName() + ".service", serviceName);
+        ClassName repositoryClass = ClassName.get(config.getPackageName() + ".repository", repositoryName);
         TypeName idType = getIdType();
 
         // Create the service implementation class
@@ -111,17 +113,15 @@ public class ServiceGenerator extends BaseGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(repositoryClass, uncapitalize(repositoryName))
                 .addStatement("this.$N = $N", uncapitalize(repositoryName), uncapitalize(repositoryName))
-                .build());
-
-        // Implement CRUD methods
+                .build());        // Implement CRUD methods
         addCrudMethods(serviceImplBuilder, entityClass, idType, repositoryName);
 
         // Build the Java file
-        JavaFile javaFile = JavaFile.builder(config.getPackageName(), serviceImplBuilder.build())
+        JavaFile javaFile = JavaFile.builder(servicePackage, serviceImplBuilder.build())
                 .build();
 
         // Write to file
-        javaFile.writeTo(outputDirectory.getParentFile());
+        javaFile.writeTo(outputDirectory);
         
         System.out.println("Generated Service implementation: " + serviceImplName);
     }

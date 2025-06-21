@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,13 +37,8 @@ public class CodeGenerator {
         generateRepository();
 
         // Generate Service interface and implementation
-        generateService();
-
-        // Generate REST Controller
+        generateService();        // Generate REST Controller
         generateController();
-
-        // Generate Unit Tests
-        generateTests();
     }
 
     private void createPackageDirectories() {
@@ -76,15 +71,8 @@ public class CodeGenerator {
     private void generateService() throws IOException {
         ServiceGenerator generator = new ServiceGenerator(config, outputDirectory);
         generator.generate();
-    }
-
-    private void generateController() throws IOException {
+    }    private void generateController() throws IOException {
         ControllerGenerator generator = new ControllerGenerator(config, outputDirectory);
-        generator.generate();
-    }
-
-    private void generateTests() throws IOException {
-        TestGenerator generator = new TestGenerator(config, testOutputDirectory);
         generator.generate();
     }
 }

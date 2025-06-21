@@ -1,4 +1,4 @@
-package com.example.codegen;
+package com.luanvv.codegen.spring;
 
 import com.squareup.javapoet.*;
 import javax.lang.model.element.Modifier;
@@ -26,10 +26,9 @@ public class RepositoryGenerator extends BaseGenerator {
         // Create the repository interface
         TypeSpec.Builder repositoryBuilder = TypeSpec.interfaceBuilder(repositoryName)
                 .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(ClassName.get("org.springframework.stereotype", "Repository"))
-                .addSuperinterface(ParameterizedTypeName.get(
+                .addAnnotation(ClassName.get("org.springframework.stereotype", "Repository"))                .addSuperinterface(ParameterizedTypeName.get(
                         ClassName.get("org.springframework.data.jpa.repository", "JpaRepository"),
-                        ClassName.get(config.getPackageName(), config.getEntityName()),
+                        ClassName.get(config.getPackageName() + ".entity", config.getEntityName()),
                         idType
                 ));
 
@@ -37,11 +36,10 @@ public class RepositoryGenerator extends BaseGenerator {
         addCustomQueryMethods(repositoryBuilder);
 
         // Build the Java file
-        JavaFile javaFile = JavaFile.builder(config.getPackageName(), repositoryBuilder.build())
-                .build();
-
-        // Write to file
-        javaFile.writeTo(outputDirectory.getParentFile());
+        String repositoryPackage = config.getPackageName() + ".repository";
+        JavaFile javaFile = JavaFile.builder(repositoryPackage, repositoryBuilder.build())
+                .build();        // Write to file
+        javaFile.writeTo(outputDirectory);
         
         System.out.println("Generated Repository interface: " + repositoryName);
     }
@@ -72,7 +70,7 @@ public class RepositoryGenerator extends BaseGenerator {
     }
 
     private void addCustomQueryMethods(TypeSpec.Builder repositoryBuilder) {
-        ClassName entityClass = ClassName.get(config.getPackageName(), config.getEntityName());
+        ClassName entityClass = ClassName.get(config.getPackageName() + ".entity", config.getEntityName());
         
         // Add findBy methods for unique fields
         for (CodeGenConfig.Field field : config.getFields()) {

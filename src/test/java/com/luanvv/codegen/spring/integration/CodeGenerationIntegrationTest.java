@@ -1,8 +1,8 @@
-package com.example.codegen.integration;
+package com.luanvv.codegen.spring.integration;
 
-import com.example.codegen.CodeGenConfig;
-import com.example.codegen.CodeGenerator;
-import com.example.codegen.YamlConfigParser;
+import com.luanvv.codegen.spring.CodeGenConfig;
+import com.luanvv.codegen.spring.CodeGenerator;
+import com.luanvv.codegen.spring.YamlConfigParser;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
