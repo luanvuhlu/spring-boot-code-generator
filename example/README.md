@@ -127,14 +127,6 @@ mvn spring-boot:run
 java -jar target/demo-app-1.0.0-SNAPSHOT.jar
 ```
 
-### 4. Access the Application
-
-- **Application**: http://localhost:8080
-- **H2 Console**: http://localhost:8080/h2-console
-  - JDBC URL: `jdbc:h2:mem:testdb`
-  - Username: `sa`
-  - Password: (empty)
-
 ## API Endpoints (Generated)
 
 Once code generation is complete, the following REST endpoints will be available:
@@ -154,18 +146,6 @@ Once code generation is complete, the following REST endpoints will be available
 5. **Build**: Run `mvn clean package`
 6. **Run**: Start the application with `mvn spring-boot:run`
 
-## Integration with IDE
-
-### IntelliJ IDEA / VS Code
-1. Generate code: `mvn generate-sources`
-2. Refresh/reimport the Maven project
-3. The generated sources will be automatically included in compilation
-
-### Eclipse
-1. Generate code: `mvn generate-sources`
-2. Right-click project → Refresh
-3. Generated sources are automatically included
-
 ## Customization
 
 You can customize the generated code by:
@@ -173,10 +153,3 @@ You can customize the generated code by:
 2. Extending the code generator plugin
 3. Adding custom templates
 4. Implementing additional generators
-
-## Notes
-
-- Generated code is placed in `target/` directories and should not be committed to version control
-- The YAML configuration file should be committed and version controlled
-- Generated SQL migrations are automatically included in Liquibase changelog
-- All generated tests use Spring Boot testing framework and mocking
