@@ -24,13 +24,17 @@ public class CodeGeneratorMojo extends AbstractMojo {
      * The Maven project
      */
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
-    private MavenProject project;
-
-    /**
-     * Path to the YAML configuration file
+    private MavenProject project;    /**
+     * Path to the YAML configuration file (for single file - backward compatibility)
      */
     @Parameter(property = "configFile", defaultValue = "src/main/resources/codegen.yaml")
     private File configFile;
+
+    /**
+     * List of YAML configuration files (for multiple files)
+     */
+    @Parameter(property = "configFiles")
+    private File[] configFiles;
 
     /**
      * Output directory for generated Java sources
@@ -48,15 +52,23 @@ public class CodeGeneratorMojo extends AbstractMojo {
      * Output directory for generated resources (SQL files)
      */
     @Parameter(property = "resourceOutputDirectory", defaultValue = "${project.build.directory}/generated-resources")
-    private File resourceOutputDirectory;
-
-    /**
+    private File resourceOutputDirectory;    /**
      * Skip code generation
      */
     @Parameter(property = "skipCodeGen", defaultValue = "false")
     private boolean skip;
 
-    @Override
+    /**
+     * Skip generation if target files already exist (allows manual overrides)
+     */
+    @Parameter(property = "skipIfExists", defaultValue = "false")
+    private boolean skipIfExists;
+
+    /**
+     * Force regeneration even if files exist
+     */
+    @Parameter(property = "forceRegenerate", defaultValue = "false")
+    private boolean forceRegenerate;@Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (skip) {
             getLog().info("Code generation is skipped.");
@@ -66,12 +78,10 @@ public class CodeGeneratorMojo extends AbstractMojo {
         getLog().info("Starting Spring Boot code generation...");
         
         try {
-            // Validate configuration file exists
-            if (!configFile.exists()) {
-                throw new MojoExecutionException("Configuration file not found: " + configFile.getAbsolutePath());
-            }
-
-            getLog().info("Reading configuration from: " + configFile.getAbsolutePath());
+            // Determine which config files to process
+            File[] filesToProcess = getConfigFilesToProcess();
+            
+            getLog().info("Processing " + filesToProcess.length + " configuration file(s)");
             getLog().info("Output directory: " + outputDirectory.getAbsolutePath());
             getLog().info("Test output directory: " + testOutputDirectory.getAbsolutePath());
             getLog().info("Resource output directory: " + resourceOutputDirectory.getAbsolutePath());
@@ -79,11 +89,12 @@ public class CodeGeneratorMojo extends AbstractMojo {
             // Create output directories
             createDirectories();
 
-            // Parse YAML configuration
-            CodeGenConfig config = parseConfiguration();
-            
-            // Generate code
-            generateCode(config);            // Add generated sources to Maven project
+            // Process each configuration file
+            for (File configFile : filesToProcess) {
+                processConfigFile(configFile);
+            }
+
+            // Add generated sources to Maven project
             addGeneratedSourcesToProject();
             
             // Copy generated resources to standard Maven directories
@@ -106,30 +117,67 @@ public class CodeGeneratorMojo extends AbstractMojo {
             }
             if (!resourceOutputDirectory.exists() && !resourceOutputDirectory.mkdirs()) {
                 throw new MojoExecutionException("Failed to create resource output directory: " + resourceOutputDirectory);
-            }
-        } catch (Exception e) {
+            }        } catch (Exception e) {
             throw new MojoExecutionException("Error creating directories", e);
         }
     }
 
-    private CodeGenConfig parseConfiguration() throws MojoExecutionException {
+    private File[] getConfigFilesToProcess() throws MojoExecutionException {
+        // If configFiles array is specified, use it
+        if (configFiles != null && configFiles.length > 0) {
+            // Validate all config files exist
+            for (File file : configFiles) {
+                if (!file.exists()) {
+                    throw new MojoExecutionException("Configuration file not found: " + file.getAbsolutePath());
+                }
+            }
+            return configFiles;
+        }
+        
+        // Otherwise, use the single configFile (backward compatibility)
+        if (!configFile.exists()) {
+            throw new MojoExecutionException("Configuration file not found: " + configFile.getAbsolutePath());
+        }
+        return new File[]{configFile};
+    }
+
+    private void processConfigFile(File configFile) throws MojoExecutionException {
+        getLog().info("Processing configuration file: " + configFile.getAbsolutePath());
+        
+        try {
+            // Parse YAML configuration
+            CodeGenConfig config = parseConfiguration(configFile);
+            
+            // Generate code
+            generateCode(config);
+            
+            getLog().info("Generated code for entity: " + config.getEntityName());
+            
+        } catch (Exception e) {
+            throw new MojoExecutionException("Failed to process config file: " + configFile.getAbsolutePath(), e);
+        }
+    }
+
+    private CodeGenConfig parseConfiguration(File configFile) throws MojoExecutionException {
         try {
             YamlConfigParser parser = new YamlConfigParser();
             return parser.parse(configFile);
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to parse configuration file: " + configFile, e);
         }
-    }
-
-    private void generateCode(CodeGenConfig config) throws MojoExecutionException {
+    }    private void generateCode(CodeGenConfig config) throws MojoExecutionException {
         try {
             CodeGenerator generator = new CodeGenerator(config, outputDirectory, testOutputDirectory, resourceOutputDirectory);
+            
+            // Set override behavior
+            generator.setOverrideBehavior(skipIfExists, forceRegenerate);
+            
             generator.generateAll();
             getLog().info("Generated code for entity: " + config.getEntityName());
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to generate code", e);
         }
-    }    private void addGeneratedSourcesToProject() {
+    }private void addGeneratedSourcesToProject() {
         // Add generated sources to Maven project so they're compiled
         project.addCompileSourceRoot(outputDirectory.getAbsolutePath());
         project.addTestCompileSourceRoot(testOutputDirectory.getAbsolutePath());

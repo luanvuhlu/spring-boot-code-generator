@@ -18,45 +18,130 @@ public class ControllerGenerator extends BaseGenerator {
     public void generate() throws IOException {
         createPackageDirectory();
         
-        String controllerName = config.getEntityName() + "Controller";
+        generateBaseController();
+        generateExtensibleController();
+    }
+
+    private void generateBaseController() throws IOException {
+        String baseControllerName = "Base" + config.getEntityName() + "Controller";
         String serviceName = config.getEntityName() + "Service";
+        String baseControllerPackage = config.getPackageName() + ".controller.base";
         
         ClassName entityClass = ClassName.get(config.getPackageName() + ".entity", config.getEntityName());
         ClassName serviceClass = ClassName.get(config.getPackageName() + ".service", serviceName);
         TypeName idType = getIdType();
 
-        // Create the controller class
+        // Create the base controller class (abstract)
+        TypeSpec.Builder baseControllerBuilder = TypeSpec.classBuilder(baseControllerName)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
+
+        // Add service field
+        FieldSpec serviceField = FieldSpec.builder(serviceClass, uncapitalize(serviceName))
+                .addModifiers(Modifier.PROTECTED, Modifier.FINAL) // Protected so subclasses can access
+                .build();
+        baseControllerBuilder.addField(serviceField);
+
+        // Add constructor
+        baseControllerBuilder.addMethod(MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(serviceClass, uncapitalize(serviceName))
+                .addStatement("this.$N = $N", uncapitalize(serviceName), uncapitalize(serviceName))
+                .build());
+
+        // Add CRUD endpoints
+        addCrudEndpoints(baseControllerBuilder, entityClass, idType, serviceName);
+
+        // Create base package directory
+        String basePackagePath = config.getPackageName().replace('.', File.separatorChar) + File.separatorChar + "controller" + File.separatorChar + "base";
+        File basePackageDir = new File(outputDirectory, basePackagePath);
+        if (!basePackageDir.exists()) {
+            basePackageDir.mkdirs();
+        }
+
+        // Build the Java file
+        JavaFile javaFile = JavaFile.builder(baseControllerPackage, baseControllerBuilder.build())
+                .build();
+
+        // Write to file (always regenerate base classes)
+        javaFile.writeTo(outputDirectory);
+        
+        System.out.println("Generated Base Controller class: " + baseControllerName);
+    }
+
+    private void generateExtensibleController() throws IOException {
+        String controllerName = config.getEntityName() + "Controller";
+        String baseControllerName = "Base" + config.getEntityName() + "Controller";
+        String serviceName = config.getEntityName() + "Service";
+        String controllerPackage = config.getPackageName() + ".controller";
+        
+        ClassName baseControllerClass = ClassName.get(config.getPackageName() + ".controller.base", baseControllerName);
+        ClassName serviceClass = ClassName.get(config.getPackageName() + ".service", serviceName);
+
+        // Check if we should skip generation of the extensible controller
+        File targetFile = getTargetFile(controllerName, "controller");
+        if (shouldSkipFile(targetFile)) {
+            return;
+        }        // Create the extensible controller class
         TypeSpec.Builder controllerBuilder = TypeSpec.classBuilder(controllerName)
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(ClassName.get("org.springframework.web.bind.annotation", "RestController"))
                 .addAnnotation(AnnotationSpec.builder(ClassName.get("org.springframework.web.bind.annotation", "RequestMapping"))
-                        .addMember("value", "$S", "/api/" + config.getEntityName().toLowerCase() + "s")
-                        .build());
+                        .addMember("value", "$S", "/api/default/" + config.getEntityName().toLowerCase() + "s")
+                        .build())
+                .superclass(baseControllerClass);
 
-        // Add service field
-        FieldSpec serviceField = FieldSpec.builder(serviceClass, uncapitalize(serviceName))
-                .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
-                .build();
-        controllerBuilder.addField(serviceField);
-
-        // Add constructor
+        // Add constructor that calls super
         controllerBuilder.addMethod(MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC)
                 .addParameter(serviceClass, uncapitalize(serviceName))
-                .addStatement("this.$N = $N", uncapitalize(serviceName), uncapitalize(serviceName))
-                .build());        // Add CRUD endpoints
-        addCrudEndpoints(controllerBuilder, entityClass, idType, serviceName);
+                .addStatement("super($N)", uncapitalize(serviceName))
+                .build());        // Add comment explaining extensibility
+        controllerBuilder.addJavadoc("""
+                Default REST controller for $L.
+                
+                This class extends $L and provides default endpoints that can be replaced
+                by creating a custom controller with @Primary annotation or different mapping.
+                
+                To create a custom implementation:
+                1. Create a new class that extends $L
+                2. Add @RestController annotation
+                3. Use @RequestMapping("/api/$L") for your custom endpoints
+                4. Your custom controller will handle the main API endpoints
+                
+                Example:
+                @RestController  
+                @RequestMapping("/api/$L")
+                public class Custom$LController extends $L {
+                    // Your custom implementation
+                }
+                
+                This file is generated only once - subsequent generations will skip this file
+                if it already exists, allowing you to maintain your customizations.
+                """, config.getEntityName(), baseControllerName, baseControllerName,
+                config.getEntityName().toLowerCase() + "s", config.getEntityName().toLowerCase() + "s",
+                config.getEntityName(), baseControllerName);
+
+        // Add example custom endpoint template
+        controllerBuilder.addMethod(MethodSpec.methodBuilder("customEndpoint")
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(AnnotationSpec.builder(ClassName.get("org.springframework.web.bind.annotation", "GetMapping"))
+                        .addMember("value", "$S", "/custom")
+                        .build())
+                .returns(ClassName.get("org.springframework.http", "ResponseEntity").withoutAnnotations())
+                .addJavadoc("Example custom endpoint - implement your custom logic here")
+                .addComment("TODO: Implement custom endpoint logic")
+                .addStatement("return $T.ok(\"Custom endpoint - implement your logic here\")", 
+                        ClassName.get("org.springframework.http", "ResponseEntity"))
+                .build());
 
         // Build the Java file
-        String controllerPackage = config.getPackageName() + ".controller";
         JavaFile javaFile = JavaFile.builder(controllerPackage, controllerBuilder.build())
                 .build();
 
         // Write to file
         javaFile.writeTo(outputDirectory);
         
-        System.out.println("Generated Controller class: " + controllerName);
-    }
+        System.out.println("Generated Controller class: " + controllerName);    }
 
     private void addCrudEndpoints(TypeSpec.Builder controllerBuilder, ClassName entityClass, TypeName idType, String serviceName) {
         String entityVar = uncapitalize(config.getEntityName());

@@ -12,12 +12,22 @@ public class CodeGenerator {
     private final File outputDirectory;
     private final File testOutputDirectory;
     private final File resourceOutputDirectory;
+    private boolean skipIfExists = false;
+    private boolean forceRegenerate = false;
 
     public CodeGenerator(CodeGenConfig config, File outputDirectory, File testOutputDirectory, File resourceOutputDirectory) {
         this.config = config;
         this.outputDirectory = outputDirectory;
         this.testOutputDirectory = testOutputDirectory;
         this.resourceOutputDirectory = resourceOutputDirectory;
+    }
+
+    /**
+     * Set override behavior for all generators
+     */
+    public void setOverrideBehavior(boolean skipIfExists, boolean forceRegenerate) {
+        this.skipIfExists = skipIfExists;
+        this.forceRegenerate = forceRegenerate;
     }
 
     /**
@@ -56,23 +66,27 @@ public class CodeGenerator {
     private void generateSqlMigration() throws IOException {
         SqlMigrationGenerator generator = new SqlMigrationGenerator(config, resourceOutputDirectory);
         generator.generate();
-    }
-
-    private void generateEntity() throws IOException {
+    }    private void generateEntity() throws IOException {
         EntityGenerator generator = new EntityGenerator(config, outputDirectory);
+        generator.setOverrideBehavior(skipIfExists, forceRegenerate);
         generator.generate();
     }
 
     private void generateRepository() throws IOException {
         RepositoryGenerator generator = new RepositoryGenerator(config, outputDirectory);
+        generator.setOverrideBehavior(skipIfExists, forceRegenerate);
         generator.generate();
     }
 
     private void generateService() throws IOException {
         ServiceGenerator generator = new ServiceGenerator(config, outputDirectory);
+        generator.setOverrideBehavior(skipIfExists, forceRegenerate);
         generator.generate();
-    }    private void generateController() throws IOException {
+    }
+
+    private void generateController() throws IOException {
         ControllerGenerator generator = new ControllerGenerator(config, outputDirectory);
+        generator.setOverrideBehavior(skipIfExists, forceRegenerate);
         generator.generate();
     }
 }

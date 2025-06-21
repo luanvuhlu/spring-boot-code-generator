@@ -91,7 +91,11 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <configFile>src/main/resources/codegen.yaml</configFile>                </configuration>
+                    <configFiles>
+                        <configFile>src/main/resources/codegen/user_accounts.yaml</configFile>
+                        <configFile>src/main/resources/codegen/products.yaml</configFile>
+                    </configFiles>
+                </configuration>
             </plugin>
 
             <!-- Maven Compiler Plugin -->

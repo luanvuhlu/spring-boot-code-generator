@@ -18,12 +18,19 @@ public class EntityGenerator extends BaseGenerator {
     public void generate() throws IOException {
         createPackageDirectory();
         
-        // Create the entity class
+        // Check if we should skip generation
+        String entityClassName = config.getEntityName();
+        File targetFile = getTargetFile(entityClassName, "entity");
+        
+        if (shouldSkipFile(targetFile)) {
+            return;
+        }
+          // Create the entity class
         TypeSpec.Builder entityBuilder = TypeSpec.classBuilder(config.getEntityName())
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(ClassName.get("jakarta.persistence", "Entity"))
                 .addAnnotation(AnnotationSpec.builder(ClassName.get("jakarta.persistence", "Table"))
-                        .addMember("name", "$S", config.getEntityName().toLowerCase() + "s")
+                        .addMember("name", "$S", config.getEffectiveTableName())
                         .build());
 
         // Add fields, getters, setters

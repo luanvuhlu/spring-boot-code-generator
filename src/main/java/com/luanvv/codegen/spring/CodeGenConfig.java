@@ -6,9 +6,9 @@ import java.util.List;
  * Configuration model for code generation
  */
 public class CodeGenConfig {
-    
-    private String packageName;
+      private String packageName;
     private String entityName;
+    private String tableName;
     private List<String> idFields;
     private List<Field> fields;
     private String sqlFileContent;
@@ -27,10 +27,16 @@ public class CodeGenConfig {
 
     public String getEntityName() {
         return entityName;
+    }    public void setEntityName(String entityName) {
+        this.entityName = entityName;
     }
 
-    public void setEntityName(String entityName) {
-        this.entityName = entityName;
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 
     public List<String> getIdFields() {
@@ -51,10 +57,19 @@ public class CodeGenConfig {
 
     public String getSqlFileContent() {
         return sqlFileContent;
+    }    public void setSqlFileContent(String sqlFileContent) {
+        this.sqlFileContent = sqlFileContent;
     }
 
-    public void setSqlFileContent(String sqlFileContent) {
-        this.sqlFileContent = sqlFileContent;
+    /**
+     * Get the effective table name to use.
+     * Returns the custom tableName if provided, otherwise defaults to entityName + "s" in lowercase.
+     */
+    public String getEffectiveTableName() {
+        if (tableName != null && !tableName.trim().isEmpty()) {
+            return tableName;
+        }
+        return entityName != null ? entityName.toLowerCase() + "s" : null;
     }
 
     /**
@@ -133,13 +148,12 @@ public class CodeGenConfig {
                     ", defaultValue='" + defaultValue + '\'' +
                     '}';
         }
-    }
-
-    @Override
+    }    @Override
     public String toString() {
         return "CodeGenConfig{" +
                 "packageName='" + packageName + '\'' +
                 ", entityName='" + entityName + '\'' +
+                ", tableName='" + tableName + '\'' +
                 ", idFields=" + idFields +
                 ", fields=" + fields +
                 ", sqlFileContent='" + sqlFileContent + '\'' +
