@@ -9,6 +9,10 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Maven plugin to generate Spring Boot boilerplate code from YAML configuration
@@ -79,10 +83,11 @@ public class CodeGeneratorMojo extends AbstractMojo {
             CodeGenConfig config = parseConfiguration();
             
             // Generate code
-            generateCode(config);
-
-            // Add generated sources to Maven project
+            generateCode(config);            // Add generated sources to Maven project
             addGeneratedSourcesToProject();
+            
+            // Copy generated resources to standard Maven directories
+            copyGeneratedResources();
 
             getLog().info("Code generation completed successfully!");
 
@@ -124,15 +129,50 @@ public class CodeGeneratorMojo extends AbstractMojo {
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to generate code", e);
         }
-    }
-
-    private void addGeneratedSourcesToProject() {
+    }    private void addGeneratedSourcesToProject() {
         // Add generated sources to Maven project so they're compiled
         project.addCompileSourceRoot(outputDirectory.getAbsolutePath());
         project.addTestCompileSourceRoot(testOutputDirectory.getAbsolutePath());
         
-        getLog().debug("Added compile source root: " + outputDirectory.getAbsolutePath());
-        getLog().debug("Added test compile source root: " + testOutputDirectory.getAbsolutePath());
+        getLog().info("Added compile source root: " + outputDirectory.getAbsolutePath());
+        getLog().info("Added test compile source root: " + testOutputDirectory.getAbsolutePath());
+    }
+
+    private void copyGeneratedResources() throws MojoExecutionException {
+        try {
+            // Standard Maven resource directory
+            File standardResourceDir = new File(project.getBasedir(), "src/main/resources");
+            
+            // Ensure the standard resource directory exists
+            if (!standardResourceDir.exists()) {
+                standardResourceDir.mkdirs();
+            }
+            
+            // Copy all files from generated-resources to src/main/resources
+            if (resourceOutputDirectory.exists()) {
+                copyDirectoryContents(resourceOutputDirectory.toPath(), standardResourceDir.toPath());
+                getLog().info("Copied generated resources to: " + standardResourceDir.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to copy generated resources", e);
+        }
+    }
+
+    private void copyDirectoryContents(Path source, Path target) throws IOException {
+        Files.walk(source)
+            .forEach(sourcePath -> {
+                try {
+                    Path targetPath = target.resolve(source.relativize(sourcePath));
+                    if (Files.isDirectory(sourcePath)) {
+                        Files.createDirectories(targetPath);
+                    } else {
+                        Files.createDirectories(targetPath.getParent());
+                        Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to copy: " + sourcePath, e);
+                }
+            });
     }
 
     // Getters for testing
